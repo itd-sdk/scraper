@@ -1,4 +1,5 @@
 from os import getenv
+from sys import setrecursionlimit
 
 from dotenv import load_dotenv
 from itd import ITDClient, ITDConfig, User
@@ -12,6 +13,7 @@ load_dotenv()
 setup_logging('WARNING')
 l = get_logger('scraper')
 l.setLevel('INFO')
+setrecursionlimit(3000)
 
 c = ITDClient(getenv('TOKEN'), config=ITDConfig(RateLimitMode.MAX, 1, {'get_user': 3}))
 
@@ -39,7 +41,7 @@ def process_user(user: User, force: bool = False, recursion: int = 0):
     elif not force:
         l.debug('skip user %s', user.username)
         return
-    elif recursion > 990:
+    if recursion > 990:
         l.debug('skip user %s (recursion)', user.username)
         return
 
