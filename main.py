@@ -20,7 +20,7 @@ db = create_db(getenv('DATABASE_URL', ''))
 users = {user.user_id for user in db.query(UserModel).all()}
 count = 0
 
-def process_user(user: User, force: bool = False):
+def process_user(user: User, force: bool = False, recursion: int = 0):
     global count
 
     if user.id not in users:
@@ -39,6 +39,9 @@ def process_user(user: User, force: bool = False):
     elif not force:
         l.debug('skip user %s', user.username)
         return
+    elif recursion > 990:
+        l.debug('skip user %s (recursion)', user.username)
+        return
 
     if count > 50:
         count = 0
@@ -47,13 +50,13 @@ def process_user(user: User, force: bool = False):
     count += 1
 
     for follower in user.followers:
-        process_user(follower)
+        process_user(follower, recursion=recursion + 1)
 
     for following in user.following:
-        process_user(following)
+        process_user(following, recursion=recursion + 1)
 
 try:
-    process_user(User('likebot2'), True)
+    process_user(User('likebot4'), True)
 except KeyboardInterrupt:
     l.info('keyboard interrupt')
 finally:
