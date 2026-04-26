@@ -1,8 +1,9 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import func, Column, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import ARRAY
 
 from db import Base
 
@@ -21,3 +22,6 @@ class User(Base):
     following: Mapped[int]
     posts: Mapped[int]
     verified: Mapped[bool]
+    following_users = Column(ARRAY(Uuid), default=[]) # brooo why i cant just mapped[list[UUID]] so stupid arrays
+    followed_by_users = Column(ARRAY(Uuid), default=[])
+    avatar: Mapped[str] = mapped_column(default='?')

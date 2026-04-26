@@ -34,7 +34,10 @@ def process_user(user: User, force: bool = False, recursion: int = 0):
             followers=user.followers_count,
             following=user.following_count,
             posts=user.posts_count,
-            verified=user.verified
+            verified=user.verified,
+            following_users=[following.id for following in user.following],
+            followed_by_users=[follower.id for follower in user.followers],
+            avatar=user.avatar
         ))
         l.info('add user %s', user.username)
         users.add(user.id)
@@ -45,7 +48,7 @@ def process_user(user: User, force: bool = False, recursion: int = 0):
         l.debug('skip user %s (recursion)', user.username)
         return
 
-    if count > 50:
+    if count > 25:
         count = 0
         l.info('commit batch')
         db.commit()
@@ -58,7 +61,7 @@ def process_user(user: User, force: bool = False, recursion: int = 0):
         process_user(following, recursion=recursion + 1)
 
 try:
-    process_user(User('likebot4'), True)
+    process_user(User('likebot5'), True)
 except KeyboardInterrupt:
     l.info('keyboard interrupt')
 finally:
