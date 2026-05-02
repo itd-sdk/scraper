@@ -11,3 +11,6 @@ dependencies = [
     "rich>=15.0.0",
     "sqlalchemy>=2.0.49",
 ]
+
+[tool.uv.sources]
+itd-sdk = { git = "https://github.com/itd-sdk/itd-sdk" }

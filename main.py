@@ -12,20 +12,21 @@ from models import User as UserModel
 load_dotenv()
 setup_logging('WARNING')
 l = get_logger('scraper')
-l.setLevel('INFO')
+l.setLevel('DEBUG')
 setrecursionlimit(3000)
 
 c = ITDClient(getenv('TOKEN'), config=ITDConfig(RateLimitMode.MAX, 1, {'get_user': 3}))
 
 db = create_db(getenv('DATABASE_URL', ''))
 
-users = {user.user_id for user in db.query(UserModel).all()}
+l.info('init')
+users = set()
 count = 0
 
 def process_user(user: User, force: bool = False, recursion: int = 0):
     global count
 
-    if user.id not in users:
+    if user.id not in users and not db.query(UserModel).where(UserModel.user_id == user.id).first():
         db.add(UserModel(
             user_id=user.id,
             created_at=user.created_at,
@@ -39,16 +40,16 @@ def process_user(user: User, force: bool = False, recursion: int = 0):
             followed_by_users=[follower.id for follower in user.followers],
             avatar=user.avatar
         ))
-        l.info('add user %s', user.username)
+        l.info('[%s] add user %s', count, user.username)
         users.add(user.id)
     elif not force:
-        l.debug('skip user %s', user.username)
+        l.debug('[%s] skip user %s', count, user.username)
         return
     if recursion > 990:
         l.debug('skip user %s (recursion)', user.username)
         return
 
-    if count > 25:
+    if count > 10:
         count = 0
         l.info('commit batch')
         db.commit()
@@ -61,7 +62,7 @@ def process_user(user: User, force: bool = False, recursion: int = 0):
         process_user(following, recursion=recursion + 1)
 
 try:
-    process_user(User('likebot5'), True)
+    process_user(User('oxo'), True)
 except KeyboardInterrupt:
     l.info('keyboard interrupt')
 finally:
