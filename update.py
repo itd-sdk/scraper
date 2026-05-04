@@ -42,12 +42,12 @@ def update_user(user: UserModel):
     user.following = user_itd.following_count or 0
     user.posts = user_itd.posts_count or 0
     user.verified = user_itd.verified
-    user.has_itdp = user_itd.id in itdp
+    user.has_itdp = str(user_itd.id) in itdp
     user.following_users = [following.id for following in user_itd.following] # pyright: ignore[reportAttributeAccessIssue]
     user.followed_by_users = [following.id for following in user_itd.followers] # pyright: ignore[reportAttributeAccessIssue]
     user.avatar = user_itd.avatar
-    l.info('update user %s', user.username)
+    l.info('[%s] update user %s', user.id, user.username)
     db.commit()
 
-for user in db.query(UserModel).all():
+for user in db.query(UserModel).order_by(UserModel.id).offset(1481).all():
     update_user(user)

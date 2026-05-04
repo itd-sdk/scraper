@@ -121,7 +121,7 @@ requires-dist = [
 [[package]]
 name = "itd-sdk"
 version = "2.0.0rc2"
-source = { git = "https://github.com/itd-sdk/itd-sdk#36ba789743767c5e08a27afd26e9b9a6f18ca835" }
+source = { git = "https://github.com/itd-sdk/itd-sdk#8e71749d18e4a6f83d837d9b24b8b1fb39febe06" }
 dependencies = [
     { name = "pydantic" },
     { name = "requests" },

@@ -23,6 +23,8 @@ class User(Base):
     posts: Mapped[int]
     verified: Mapped[bool]
     has_itdp: Mapped[bool] = mapped_column(default=False)
+    # following_users: Mapped[str]
+    # followed_by_users: Mapped[str]
     following_users = Column(ARRAY(Uuid), default=[]) # brooo why i cant just mapped[list[UUID]] so stupid arrays
     followed_by_users = Column(ARRAY(Uuid), default=[])
     avatar: Mapped[str] = mapped_column(default='?')
