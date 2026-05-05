@@ -30,6 +30,9 @@ with open('itdp.json', 'r') as fl:
 def update_user(user: UserModel):
     try:
         user_itd = User(user.user_id)
+        user_itd.refresh()
+        followings = user_itd.following
+        followers = user_itd.followers
     except (TargetUserBannedError, NotFoundError):
         l.warning('user not found %s', user.username)
         user.exists = False
@@ -43,11 +46,11 @@ def update_user(user: UserModel):
     user.posts = user_itd.posts_count or 0
     user.verified = user_itd.verified
     user.has_itdp = str(user_itd.id) in itdp
-    user.following_users = [following.id for following in user_itd.following] # pyright: ignore[reportAttributeAccessIssue]
-    user.followed_by_users = [following.id for following in user_itd.followers] # pyright: ignore[reportAttributeAccessIssue]
+    user.following_users = [following.id for following in followings] # pyright: ignore[reportAttributeAccessIssue]
+    user.followed_by_users = [follower.id for follower in followers] # pyright: ignore[reportAttributeAccessIssue]
     user.avatar = user_itd.avatar
     l.info('[%s] update user %s', user.id, user.username)
     db.commit()
 
-for user in db.query(UserModel).order_by(UserModel.id).offset(1481).all():
+for user in db.query(UserModel).order_by(UserModel.id).offset(2275).limit(1000).all():
     update_user(user)

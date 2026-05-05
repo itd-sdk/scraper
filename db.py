@@ -36,13 +36,13 @@ Base = declarative_base()
 
 def create_db(url: str) -> Session:
     engine = create_engine(url, pool_pre_ping=True, pool_recycle=300)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, query_cls=RetryingQuery)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
-    return SessionLocal()
+    return SessionLocal(query_cls=RetryingQuery)
 
 def create_local_db() -> Session:
     engine = create_engine("sqlite:///database.db", connect_args={"check_same_thread": False})
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, query_cls=RetryingQuery)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     return SessionLocal()
 
