@@ -8,7 +8,7 @@ from itd import ITDClient, ITDConfig, User
 from itd.enums import RateLimitMode
 from itd.logger import setup_logging, get_logger
 
-from db import create_db, create_local_db
+from db import create_local_db, commit_with_retry
 from models import User as UserModel
 
 load_dotenv()
@@ -17,14 +17,13 @@ l = get_logger('scraper')
 l.setLevel('DEBUG')
 setrecursionlimit(3000)
 
-c = ITDClient(getenv('BOT_TOKEN'), config=ITDConfig(RateLimitMode.MAX, 1, {'get_user': 3}))
+c = ITDClient(getenv('BOT_TOKEN'), config=ITDConfig(RateLimitMode.MAX, 1, {'get_user': 5}))
 
-db = create_db(getenv('DATABASE_URL', ''))
-local_db = create_local_db()
+# db = create_db(getenv('DATABASE_URL', ''))
+db = create_local_db()
 
 l.info('init')
 users = set()
-count = 0
 
 with open('itdp.json', 'r') as fl:
     itdp = load(fl)
@@ -32,7 +31,7 @@ with open('itdp.json', 'r') as fl:
 def create_user(id: UUID, parent: str):
     global count
 
-    if id not in users and not local_db.query(UserModel).where(UserModel.user_id == id).first():
+    if id not in users and not db.query(UserModel).where(UserModel.user_id == id).first():
         user = User(id)
         model = UserModel(
             user_id=user.id,
@@ -48,37 +47,16 @@ def create_user(id: UUID, parent: str):
             avatar=user.avatar,
             has_itdp=str(user.id) in itdp
         )
-        local_db.add(model)
-        db.add(UserModel(
-            user_id=user.id,
-            created_at=user.created_at,
-            username=user.username,
-            display_name=user.display_name,
-            followers=user.followers_count,
-            following=user.following_count,
-            posts=user.posts_count,
-            verified=user.verified,
-            following_users=[following.id for following in user.following],
-            followed_by_users=[follower.id for follower in user.followers],
-            avatar=user.avatar,
-            has_itdp=str(user.id) in itdp
-        ))
+        db.add(model)
+        commit_with_retry(db)
+        users.add(user.id)
 
         l.info('add user %s parent=%s', user.username, parent)
-        count += 1
-        users.add(user.id)
         return model
     else:
         l.debug('skip user %s parent=%s', id, parent)
 
 def process_user(user: UserModel):
-    global count
-
-    if count > 10:
-        count = 0
-        l.info('commit batch')
-        db.commit()
-
     for follower in eval(user.followed_by_users):
         model = create_user(follower, user.username)
         if model:
@@ -90,12 +68,10 @@ def process_user(user: UserModel):
             process_user(model)
 
 try:
-    for user in local_db.query(UserModel).offset(100).limit(1000).all():
+    for user in db.query(UserModel).offset(100).limit(1000).all():
         process_user(user)
+
 except KeyboardInterrupt:
     l.info('keyboard interrupt')
 finally:
-    local_db.commit()
-    local_db.close()
-    db.commit()
     db.close()

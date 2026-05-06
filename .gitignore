@@ -12,3 +12,4 @@ wheels/
 database.db
 .env
 migrate.py
+posts.py

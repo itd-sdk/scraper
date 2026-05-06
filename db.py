@@ -8,13 +8,11 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
 
+_RETRY_ERRORS = ("server closed the connection unexpectedly",)
+_MAX_RETRIES = 10
+
 # Source - https://stackoverflow.com/a/60614707
 class RetryingQuery(Query):
-    _max_retry_count = 10
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def __iter__(self):
         attempts = 0
         while True:
@@ -22,14 +20,27 @@ class RetryingQuery(Query):
             try:
                 return super().__iter__()
             except (OperationalError, AlchemyOpetationalError) as e:
-                if "server closed the connection unexpectedly" not in str(e):
+                if not any(msg in str(e) for msg in _RETRY_ERRORS):
                     raise
-                if attempts <= self._max_retry_count:
-                    sleep_for = 2 ** (attempts - 1)
-                    sleep(sleep_for)
-                    continue
-                else:
+                if attempts > _MAX_RETRIES:
                     raise
+                sleep(2 ** (attempts - 1))
+
+
+def commit_with_retry(session: Session) -> None:
+    attempts = 0
+    while True:
+        attempts += 1
+        try:
+            session.commit()
+            return
+        except (OperationalError, AlchemyOpetationalError) as e:
+            if not any(msg in str(e) for msg in _RETRY_ERRORS):
+                raise
+            if attempts > _MAX_RETRIES:
+                raise
+            session.rollback()
+            sleep(2 ** (attempts - 1))
 
 
 Base = declarative_base()

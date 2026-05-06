@@ -1,5 +1,4 @@
 from os import getenv
-from sys import setrecursionlimit
 from json import load
 
 from dotenv import load_dotenv
@@ -8,18 +7,17 @@ from itd.enums import RateLimitMode
 from itd.logger import setup_logging, get_logger
 from itd.exceptions import TargetUserBannedError, NotFoundError
 
-from db import create_db
+from db import create_local_db, commit_with_retry
 from models import User as UserModel
 
 load_dotenv()
 setup_logging('WARNING')
 l = get_logger('updater')
 l.setLevel('INFO')
-setrecursionlimit(3000)
 
-c = ITDClient(getenv('TOKEN'), config=ITDConfig(RateLimitMode.MAX, 1, {'get_user': 3}))
+c = ITDClient(getenv('BOT_TOKEN'), config=ITDConfig(RateLimitMode.MAX, 1, {'get_user': 5}))
 
-db = create_db(getenv('DATABASE_URL', ''))
+db = create_local_db()
 
 l.info('init')
 users = set()
@@ -36,7 +34,7 @@ def update_user(user: UserModel):
     except (TargetUserBannedError, NotFoundError):
         l.warning('user not found %s', user.username)
         user.exists = False
-        db.commit()
+        commit_with_retry(db)
         return
 
     user.username = user_itd.username
@@ -46,11 +44,11 @@ def update_user(user: UserModel):
     user.posts = user_itd.posts_count or 0
     user.verified = user_itd.verified
     user.has_itdp = str(user_itd.id) in itdp
-    user.following_users = [following.id for following in followings] # pyright: ignore[reportAttributeAccessIssue]
-    user.followed_by_users = [follower.id for follower in followers] # pyright: ignore[reportAttributeAccessIssue]
+    user.following_users = str([following.id for following in followings])
+    user.followed_by_users = str([follower.id for follower in followers])
     user.avatar = user_itd.avatar
     l.info('[%s] update user %s', user.id, user.username)
-    db.commit()
+    commit_with_retry(db)
 
-for user in db.query(UserModel).order_by(UserModel.id).offset(2275).limit(1000).all():
+for user in db.query(UserModel).order_by(UserModel.id).offset(6840).limit(1500).all():
     update_user(user)

@@ -14,3 +14,10 @@ dependencies = [
 
 [tool.uv.sources]
 itd-sdk = { git = "https://github.com/itd-sdk/itd-sdk" }
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "semver2"
+version_provider = "uv"
+major_version_zero = true
